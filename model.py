@@ -24,18 +24,22 @@ class EncoderCNN(nn.Module):
 class DecoderRNN(nn.Module):
     def __init__(self, embed_size, hidden_size, vocab_size, num_layers=1, dropout=0.5):
         super(DecoderRNN, self).__init__()
-        self.hidden = hidden_size
-        self.vocab_size = vocab_size
-        self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, dropout=dropout)
+        self.hidden_dim = hidden_size
+        self.layer = num_layers
+        
+        self.embed = nn.Embedding(vocab_size, embed_size)
+        self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, dropout=dropout, batch_first=True)
         self.fc = nn.Linear(hidden_size, vocab_size)
+        
     
     def forward(self, features, captions):
-        h0 = torch.randn(1, features.shape[0], self.hidden)
-        c0 = torch.randn(1, features.shape[0], self.hidden)
-        out , hidden = self.lstm(features.unsqueeze(0), (h0, c0))
-        out, hidden = self.lstm(captions.unsqueeze(0), hidden)
+        initial_hidden = (torch.rand(self.layer, 64, self.hidden_dim), 
+                          torch.rand(self.layer, 64, self.hidden_dim))
+        cap_embed = self.embed(captions[:,:-1])
+        sequence_input = torch.cat((features.unsqueeze(1), cap_embed), 1)
+        out, _ = self.lstm(sequence_input, initial_hidden)
         out = self.fc(out)
-        out = out.view(-1, captions.shape[1], self.vocab_size)
+        
         return out
 
     def sample(self, inputs, states=None, max_len=20):
