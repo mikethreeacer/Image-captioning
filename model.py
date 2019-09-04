@@ -22,14 +22,18 @@ class EncoderCNN(nn.Module):
     
 
 class DecoderRNN(nn.Module):
-    def __init__(self, embed_size, hidden_size, vocab_size, num_layers=2, dropout=0.5):
+    def __init__(self, embed_size, hidden_size, vocab_size, num_layers=1, dropout=0.5):
         super(DecoderRNN, self).__init__()
+        self.hidden = hidden_size
         self.vocab_size = vocab_size
         self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, dropout=dropout)
         self.fc = nn.Linear(hidden_size, vocab_size)
     
     def forward(self, features, captions):
-        out, hidden = self.lstm(captions, features)
+        h0 = torch.randn(1, features.shape[0], self.hidden)
+        c0 = torch.randn(1, features.shape[0], self.hidden)
+        out , hidden = self.lstm(features.unsqueeze(0), (h0, c0))
+        out, hidden = self.lstm(captions.unsqueeze(0), hidden)
         out = self.fc(out)
         out = out.view(-1, captions.shape[1], self.vocab_size)
         return out
