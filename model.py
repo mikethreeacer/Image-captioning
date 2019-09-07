@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+import numpy as np
 
 
 class EncoderCNN(nn.Module):
@@ -41,11 +42,12 @@ class DecoderRNN(nn.Module):
     def sample(self, inputs, states=None, max_len=20):
         " accepts pre-processed image tensor (inputs) and returns predicted sentence (list of tensor ids of length max_len) "
         predicted_sentence = []
-        out, hidden = self.lstm(inputs)
-        
-        for _ in range(max_len+1):
-            out, hidden = self.lstm(out, hidden)
-            predicted_sentence.append(out)
+        for _ in range(max_len):
+            out, states = self.lstm(inputs, states)
+            word = torch.argmax(self.fc(out), 2)
+            inputs = self.embed(word)
+            word = word.cpu().numpy()
+            word = int(np.squeeze(word))
+            predicted_sentence.append(word)
             
-        predicted_sentence = predicted_sentence[:, :, :-1]
         return predicted_sentence
